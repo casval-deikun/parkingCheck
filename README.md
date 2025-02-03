@@ -1,4 +1,4 @@
-# parkingCheck simple PWA web app
+# parkingCheck simple PWA web app(AWS Lambda)
 
 lambda_function.py showing web of available parking lots.
 No S3 or EC2 needed currently, enabled by putting all required resouce hosting into the lambda function.
