@@ -4,7 +4,7 @@ import time
 import json
 
 # Lambda URL (API Gateway의 엔드포인트)
-LAMBDA_URL = "https://r5gxctlmk5whdbbdshppch2phi0lhfbq.lambda-url.ap-northeast-2.on.aws//update-button-status"
+LAMBDA_URL = "https://jhevggynh3qvc5degijpvsta3a0fcacz.lambda-url.ap-northeast-2.on.aws///update-button-status"
 
 def generate_button_status():
     # 646개의 버튼 상태를 랜덤으로 생성 (0 또는 1)
