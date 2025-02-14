@@ -209,6 +209,22 @@ HTML_CONTENT = r"""<!DOCTYPE html>
           <span style=" display:inline-block; width:200px; height:150px; background-color:orange; vertical-align:middle; margin-right:10px;"></span>
           장애인 주차구역
         </p>
+        <div id="zone-info" style="
+         position: absolute;
+         top: 10px;  /* 버튼들 아래에 적절히 배치 예시 */
+         left: 2000px;
+         width: 800px;
+         height: 500px;
+         background-color: #ffffff;
+         border: 5px solid #333;
+         padding: 20px;
+         border-radius: 10px;
+         z-index: 9999;
+         font-size: 62px;">
+      <div id="zone1-info"></div>
+      <div id="zone2-info" style="margin-top:40px;"></div>
+      <div id="zone3-info" style="margin-top:40px;"></div>
+    </div>
       </div>
     </div>
     <div class="container" id="page1">
@@ -889,6 +905,9 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         .then(res => res.json())
         .then(data => {
           const buttons = document.querySelectorAll('.space');
+          let page1Parked = 0; // 1~267
+          let page2Parked = 0; // 268~484
+          let page3Parked = 0; // 485~646
           buttons.forEach((btn, idx) => {
             const buttonNumber = idx + 1;
             const status = data[idx];
@@ -904,7 +923,27 @@ HTML_CONTENT = r"""<!DOCTYPE html>
               // 차 있음
               btn.style.backgroundColor = 'red';
             }
+              if (status === 1) {
+            if (buttonNumber <= 267) {
+              page1Parked++;
+            } else if (buttonNumber <= 484) {
+              page2Parked++;
+            } else {
+              page3Parked++;
+            }
+          }
           });
+           const zone1Total = 267; // 좌측 구역
+        const zone2Total = 217; // 중간 구역
+        const zone3Total = 162; // 우측 구역
+
+        document.getElementById('zone1-info').textContent =
+          `좌측 구역: 총 ${zone1Total}칸 중 주차 ${page1Parked}대 (남은 ${zone1Total - page1Parked}칸)`;
+        document.getElementById('zone2-info').textContent =
+          `중간 구역: 총 ${zone2Total}칸 중 주차 ${page2Parked}대 (남은 ${zone2Total - page2Parked}칸)`;
+        document.getElementById('zone3-info').textContent =
+          `우측 구역: 총 ${zone3Total}칸 중 주차 ${page3Parked}대 (남은 ${zone3Total - page3Parked}칸)`;
+      
         })
       .catch(error => console.error('Error fetching button status:', error));
         }
