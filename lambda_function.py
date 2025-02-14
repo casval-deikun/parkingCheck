@@ -29,7 +29,7 @@ MANIFEST_JSON = r"""{
 # ---------------------------
 SERVICE_WORKER_JS = r"""console.log('[Service Worker] Loaded');
 
-const CACHE_NAME = 'my-pwa-cache-v1';
+const CACHE_NAME = 'my-pwa-cache-v1.1';
 const INITIAL_CACHE_URLS = [
   '/',             // index.html
   '/manifest.json' // manifest
@@ -63,32 +63,34 @@ self.addEventListener('activate', (event) => {
   );
 });
 // fetch 이벤트 (캐시 우선 로직)
+// fetch 이벤트
 self.addEventListener('fetch', (event) => {
-  console.log('[SW] Fetch:', event.request.url);
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // 캐시에 있으면 반환, 없으면 네트워크 요청
+  const reqUrl = new URL(event.request.url);
+
+  // 1) /get-button-status 등의 동적 요청인지 체크
+  if (reqUrl.pathname === '/get-button-status') {
+    // --> 네트워크 우선 (fetch) 하고, 실패 시 캐시(오프라인) 처리 등
+    event.respondWith(
+      fetch(event.request).catch(err => {
+        console.error('[SW] Fetch failed:', err);
+        return new Response("오프라인 상태", { status: 503 });
+      })
+    );
+  }
+  // 2) 그 외 (정적 파일 등)만 기존처럼 캐시 우선
+  else {
+    event.respondWith(
+      caches.match(event.request).then(response => {
         if (response) {
           return response;
         }
         return fetch(event.request).then(networkResponse => {
-          // 받은 응답을 캐시에 저장
-          return caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, networkResponse.clone());
-            return networkResponse;
-          });
+          // 받은 정적 파일은 캐시에 저장
+          ...
         });
       })
-      .catch(err => {
-        console.error('[SW] Fetch failed:', err);
-        // 오프라인 fallback 처리 가능
-        return new Response("오프라인 상태이거나 오류가 발생했습니다.", {
-          status: 503,
-          statusText: "Service Unavailable"
-        });
-      })
-  );
+    );
+  }
 });
 """
 # ---------------------------
@@ -129,7 +131,6 @@ HTML_CONTENT = r"""<!DOCTYPE html>
             font-size: 65px
         }
         .navigation button {
-            background-color: gray;
             border: 8px solid black;
             text-align: center;
             line-height: normal;
@@ -139,6 +140,17 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         .navigation button:hover {
             background-color: #ff6347;
             transform: scale(1.1);
+        }
+        .gate {
+            position: absolute;
+            border: 2px solid black;
+            text-align: center;
+            line-height: normal;
+            cursor: pointer;
+            font-size: 200px;
+            color : #d8cccf;
+            background-color: #3c2529;
+            
         }
         body {
             transform: scale(0.183);
@@ -159,9 +171,45 @@ HTML_CONTENT = r"""<!DOCTYPE html>
 </head>
 <body>
     <div class="navigation" style="top: 750px; left: 500px; width: 2000px; height: 500px;">
-        <button onclick="showPage(1)" style="top: 750px; left: 100px; width: 600px; height: 300px;">좌측 구역</button>
-        <button onclick="showPage(2)" style="top: 750px; left: 500px; width: 600px; height: 300px;">중간 구역</button>
-        <button onclick="showPage(3)" style="top: 750px; left: 900px; width: 600px; height: 300px;">우측 구역</button>
+        <button onclick="showPage(1)" class="button-1" style="background-color: yellow; top: 750px; left: 100px; width: 600px; height: 300px;">좌측 구역</button>
+        <button onclick="showPage(2)" class="button-2" style="background-color: red; top: 750px; left: 500px; width: 600px; height: 300px;">중간 구역</button>
+        <button onclick="showPage(3)" class="button-3" style="background-color: greenyellow; top: 750px; left: 900px; width: 600px; height: 300px;">우측 구역</button>
+        <img src="https://blog.kakaocdn.net/dn/6jipq/btsL5rpPSmw/jGKhBz1DQqbZu2K1KGJo51/img.png"
+         alt="My Image"
+         style="
+             position: absolute;
+             top: 10px;  /* 버튼들과 맞춰보세요 */
+             left: 1830px; /* 버튼들 옆에 배치할 x좌표 */
+             width: 1000px;
+             height: 900px; 
+             z-index: 9999
+            " />
+        <div style="
+        position: absolute;
+        top: 10px;         /* 이미지 하단(900px)보다 200px 정도 아래 */
+        left: 2950px;        /* 이미지는 left:1830 ~ 2830까지 차지 → 120px 정도 오른쪽 여유 */
+        width: 1500px;        
+        padding: 20px;
+        background-color: #f8f8f8;
+        border: 3px solid #333;
+        border-radius: 10px;
+        z-index: 9999;
+        font-size: 100px;
+        line-height: 1.2;
+      ">
+        <p style="margin: 10px 0;">
+          <span style=" display:inline-block; width:200px; height:150px; background-color:red; vertical-align:middle; margin-right:10px;"></span>
+          주차됨
+        </p>
+        <p style="margin: 10px 0;">
+          <span style=" display:inline-block; width:200px; height:150px; background-color:greenyellow; vertical-align:middle; margin-right:10px;"></span>
+          비어있음
+        </p>
+        <p style="margin: 10px 0;">
+          <span style=" display:inline-block; width:200px; height:150px; background-color:orange; vertical-align:middle; margin-right:10px;"></span>
+          장애인 주차구역
+        </p>
+      </div>
     </div>
     <div class="container" id="page1">
         <div class="space" style="top: 120px; left: 120px; width: 1440px; height: 420px;">Button 1</div>
@@ -431,6 +479,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         <div class="space" style="top: 14040px; left: 6740px; width: 400px; height: 1060px;">Button 265</div>
         <div class="space" style="top: 14040px; left: 7220px; width: 400px; height: 1060px;">Button 266</div>
         <div class="space" style="top: 14040px; left: 7680px; width: 420px; height: 1060px;">Button 267</div>
+        <div class="gate" style="top: 14040px; left: 8200px; width: 1500px; height: 1060px;">메인 게이트</div>
     </div>
     <div class="container" id="page2" style="display: none;">
         <div class="space" style="top: 360.0px; left: 160.0px; width: 480.0px; height: 1050.0px;">Button 268</div>
@@ -637,6 +686,7 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         <div class="space" style="top: 15300.0px; left: 8080.0px; width: 480.0px; height: 1050.0px;">Button 469</div>
         <div class="space" style="top: 15300.0px; left: 8650.0px; width: 480.0px; height: 1050.0px;">Button 470</div>
         <div class="space" style="top: 15300.0px; left: 9220.0px; width: 480.0px; height: 1050.0px;">Button 471</div>
+        <div class="gate" style="top: 16900.0px; left: 100.0px; width: 1200.0px; height: 1350.0px;">메인 게이트</div>
         <div class="space" style="top: 16900.0px; left: 1360.0px; width: 570.0px; height: 1350.0px;">Button 472</div>
         <div class="space" style="top: 16900.0px; left: 1990.0px; width: 570.0px; height: 1350.0px;">Button 473</div>
         <div class="space" style="top: 16900.0px; left: 2650.0px; width: 570.0px; height: 1350.0px;">Button 474</div>
@@ -816,6 +866,15 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         <div class="space" style="top: 16566px; left: 264px; width: 1166px; height: 440px;">Button 646</div>
     </div>
     <script>
+        // 예: 장애인 주차 구역 버튼 번호 (1-based)
+        const DISABLED_PARKING_BUTTONS = [
+          2, 3, 4, 262, 263, 264, 265, 266, 267,
+          472, 473, 474, 475, 476, 477,
+          576, 578, 579,
+          591, 593,
+          604, 606, 607, 608
+        ];
+
         function showPage(pageNumber) {
             const pages = document.querySelectorAll('.container');
             pages.forEach(page => page.style.display = 'none');
@@ -826,23 +885,31 @@ HTML_CONTENT = r"""<!DOCTYPE html>
         }
 
         function fetchAndUpdateButtons() {
-            // 5초마다 get-button-status를 호출
-            fetch('/get-button-status') 
-                .then(response => response.json())
-                .then(data => {
-                    const buttons = document.querySelectorAll('.space');
-                    buttons.forEach((btn, idx) => {
-                        if (data[idx] === 0) {
-                            btn.style.backgroundColor = 'greenyellow'; 
-                        } else {
-                            btn.style.backgroundColor = 'red';
-                        }
-                    });
-                })
-                .catch(error => console.error('Error fetching button status:', error));
+      fetch('/get-button-status')
+        .then(res => res.json())
+        .then(data => {
+          const buttons = document.querySelectorAll('.space');
+          buttons.forEach((btn, idx) => {
+            const buttonNumber = idx + 1;
+            const status = data[idx];
+
+            if (status === 0) {
+              // 빈자리
+              if (DISABLED_PARKING_BUTTONS.includes(buttonNumber)) {
+                btn.style.backgroundColor = 'orange'; 
+              } else {
+                btn.style.backgroundColor = 'greenyellow';
+              }
+            } else {
+              // 차 있음
+              btn.style.backgroundColor = 'red';
+            }
+          });
+        })
+      .catch(error => console.error('Error fetching button status:', error));
         }
 
-        setInterval(fetchAndUpdateButtons, 5000);
+        setInterval(fetchAndUpdateButtons, 1000);
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchAndUpdateButtons();
